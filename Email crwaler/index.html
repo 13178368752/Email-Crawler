@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Email Crawler</title>
+    <script src="//apps.bdimg.com/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="lib/xlsx.mini.js"></script>
+</head>
+<style>
+    .title{
+        font-size: 40px;
+        text-align: center;
+    }
+    .nav{
+        text-align: center;
+    }
+    #upload{
+        margin:10px auto;
+    }
+    .sendEmail{
+        display: none;
+        margin:10px auto;
+    }
+    .download{
+        display: none;
+        margin:10px auto;
+    }
+    #wait{
+        display: none;
+    }
+</style>
+<body>
+    <div class="title">
+        Email Crawler
+    </div>
+    <div class="nav">
+        <h3>Please put the web link into the excel sheet, put the url into the first column, like this</h3>
+        <img src="shuoming.png">
+        <h3>Click the button to upload</h3>
+        <input id="upload" type="file"/>
+        <button class="sendEmail">crawing...</button>
+        <p id="wait">Wait some seconds......</p>
+        <button class="download">Download the results</button>
+    </div>
+
+</body>
+<script>
+    let list = [];
+    let url = [];
+    let res;//store crawler results
+
+    let download=$(".download");
+    let send=$(".sendEmail")
+    let wait=$("#wait");
+    let upload=$('#upload')
+
+    upload.change(function(e) {
+        url.splice(0,url.length);
+        list.splice(0,list.length);
+        let files = e.target.files;
+        let fileReader = new FileReader();
+        fileReader.onload = function(ev) {
+            try {
+                var data = ev.target.result,
+                    workbook = XLSX.read(data, {
+                        type: 'binary'
+                    });// Read the entire excel table object in a binary stream
+                send.css("display","block")
+            } catch (e) {
+                console.log('Incorrect file type');
+                return;
+            }
+
+            //read excel
+            let fromTo = '';
+            for (let sheet in workbook.Sheets) {
+                if (workbook.Sheets.hasOwnProperty(sheet)) {
+                    fromTo = workbook.Sheets[sheet]['!ref'];
+                    console.log(fromTo);
+                    list = list.concat(XLSX.utils.sheet_to_json(workbook.Sheets[sheet]));
+                }
+            }
+            for(let i=0;i<list.length;i++){
+                list[i]=Object.values(list[i])[0]
+            }
+            let filterArr=["facebook","Instagram","instagram","twitter","youtube","onlyfans"]
+
+            for (let i=0;i<list.length;i++){
+                if(list[i]!==''){
+                    if(filter(filterArr,list[i])){
+                        url.push(list[i]);
+                    }
+                }
+            }
+        };
+        // 以二进制方式打开文件
+        fileReader.readAsBinaryString(files[0]);
+    });
+
+    // filter some website,like facebook,ig,twitter,youtube
+    let filter=function (arr,str){
+        for(let j=0;j<arr.length;j++){
+            if(str.indexOf(arr[j])!==-1){
+                return 0
+            }
+        }
+        return 1
+    }
+
+    // post
+    send.click(function (){
+        send.css("display","none");
+        wait.css("display","block");
+        upload.css("display","none")
+        if(url!==null){
+            $.ajax({
+                url: 'http://127.0.0.1:8000/api/crawler',
+                dataType: 'json',
+                type: 'post',
+                data: {
+                    url
+                },
+                traditional: true,
+                success: function (data) {
+                    res=data;
+                    wait.css("display","none");
+                    download.css("display","block")
+                }
+            })
+        }
+    })
+
+    // download result
+    download.click(function (){
+        upload.css("display","block")
+        download.css("display","none")
+        var a = document.createElement('a');
+        a.href = 'data:text/txt;charset=utf-8,\ufeff'+encodeURIComponent(res);
+        a.download = 'result.csv';
+        a.click();
+    })
+
+
+</script>
+</html>
