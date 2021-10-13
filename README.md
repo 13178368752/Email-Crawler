@@ -8,3 +8,6 @@ Email:georgelethan2@gmail.com
 
 #Technology Stack
 >Jquery,Node.js,Xlsx,Puppeteer
+
+#Use
+>Import excel files in the interface to crawl emails
